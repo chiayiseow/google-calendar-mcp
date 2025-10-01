@@ -55,14 +55,48 @@ async function main() {
       return getToolDefinitions();
     });
 
+    // // Call Tool Handler
+    // server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    //   // Check if tokens are valid before handling the request
+    //   if (!(await tokenManager.validateTokens())) {
+    //     throw new Error("Authentication required. Please run 'npm run auth' to authenticate.");
+    //   }
+      
+    //   // Delegate the actual tool execution to the specialized handler
+    //   return handleCallTool(request, oauth2Client);
+    // });
     // Call Tool Handler
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      // Check if tokens are valid before handling the request
+      const { arguments: args } = request.params;
+      
+      // If accessToken is provided in arguments, use it directly
+      if (args && typeof args === 'object' && 'accessToken' in args) {
+        const externalToken = (args as any).accessToken;
+        
+        // Create a temporary OAuth client with the provided token
+        const tempClient = new OAuth2Client();
+        tempClient.setCredentials({ access_token: externalToken });
+        
+        // Remove accessToken from args before passing to handler
+        const { accessToken, ...cleanArgs } = args as any;
+        
+        // Call handler with temp client
+        const modifiedRequest = {
+          ...request,
+          params: {
+            ...request.params,
+            arguments: cleanArgs
+          }
+        };
+        
+        return handleCallTool(modifiedRequest, tempClient);
+      }
+      
+      // Original flow: Check if tokens are valid
       if (!(await tokenManager.validateTokens())) {
         throw new Error("Authentication required. Please run 'npm run auth' to authenticate.");
       }
       
-      // Delegate the actual tool execution to the specialized handler
       return handleCallTool(request, oauth2Client);
     });
 

@@ -112,6 +112,10 @@ export function getToolDefinitions() {
         inputSchema: {
           type: "object",
           properties: {
+            accessToken: {
+              type: "string",
+              description: "Optional OAuth2 access token for authentication. If provided, bypasses stored credentials.",
+            },
             calendarId: {
               type: "string",
               description: "ID of the calendar to create the event in (use 'primary' for the main calendar)",

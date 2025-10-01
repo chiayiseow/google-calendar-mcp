@@ -11,7 +11,7 @@ import type * as FsPromises from 'fs/promises';
 import type { Server as MCPServerType } from '@modelcontextprotocol/sdk/server/index.js';
 import type { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { TokenManager } from './auth/tokenManager.js';
-import { FreeBusyEventHandler } from '../src/handlers/core/FreeBusyEventHandler.js';
+import { FreeBusyEventHandler } from './handlers/core/FreeBusyEventHandler.js';
 import { z } from 'zod';
 
 // --- Mocks ---
