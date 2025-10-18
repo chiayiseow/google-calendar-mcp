@@ -42,10 +42,10 @@ async function main() {
 
     // 2. Start auth server if authentication is required
     // The start method internally validates tokens first
-    const authSuccess = await authServer.start();
-    if (!authSuccess) {
-      process.exit(1);
-    }
+    // const authSuccess = await authServer.start();
+    // if (!authSuccess) {
+    //   process.exit(1);
+    // }
 
     // 3. Set up MCP Handlers
     
