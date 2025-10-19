@@ -28,17 +28,24 @@ const server = new Server(
   }
 );
 
-let oauth2Client: OAuth2Client;
-let tokenManager: TokenManager;
-let authServer: AuthServer;
+let oauth2Client: OAuth2Client | null = null;
+let tokenManager: TokenManager | null = null;
+let authServer: AuthServer | null = null;
 
-// --- Main Application Logic --- 
+// --- Main Application Logic ---
 async function main() {
   try {
-    // 1. Initialize Authentication
-    oauth2Client = await initializeOAuth2Client();
-    tokenManager = new TokenManager(oauth2Client);
-    authServer = new AuthServer(oauth2Client);
+    // 1. Initialize Authentication (optional - only if gcp-oauth.keys.json exists)
+    // This is not required when using external access tokens
+    try {
+      oauth2Client = await initializeOAuth2Client();
+      tokenManager = new TokenManager(oauth2Client);
+      authServer = new AuthServer(oauth2Client);
+      console.error("OAuth credentials loaded successfully. Server can use stored tokens or external tokens.");
+    } catch (error) {
+      console.error("No OAuth credentials file found. Server will only work with external access tokens.");
+      // Continue without stored credentials - external tokens will be required
+    }
 
     // 2. Start auth server if authentication is required
     // The start method internally validates tokens first
@@ -55,31 +62,21 @@ async function main() {
       return getToolDefinitions();
     });
 
-    // // Call Tool Handler
-    // server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    //   // Check if tokens are valid before handling the request
-    //   if (!(await tokenManager.validateTokens())) {
-    //     throw new Error("Authentication required. Please run 'npm run auth' to authenticate.");
-    //   }
-      
-    //   // Delegate the actual tool execution to the specialized handler
-    //   return handleCallTool(request, oauth2Client);
-    // });
     // Call Tool Handler
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { arguments: args } = request.params;
-      
+
       // If accessToken is provided in arguments, use it directly
       if (args && typeof args === 'object' && 'accessToken' in args) {
         const externalToken = (args as any).accessToken;
-        
+
         // Create a temporary OAuth client with the provided token
         const tempClient = new OAuth2Client();
         tempClient.setCredentials({ access_token: externalToken });
-        
+
         // Remove accessToken from args before passing to handler
         const { accessToken, ...cleanArgs } = args as any;
-        
+
         // Call handler with temp client
         const modifiedRequest = {
           ...request,
@@ -88,15 +85,19 @@ async function main() {
             arguments: cleanArgs
           }
         };
-        
+
         return handleCallTool(modifiedRequest, tempClient);
       }
-      
-      // Original flow: Check if tokens are valid
+
+      // Original flow: Check if tokens are valid (only if OAuth client was initialized)
+      if (!oauth2Client || !tokenManager) {
+        throw new Error("Authentication required. Either provide an accessToken in the request arguments, or run 'npm run auth' to set up stored credentials.");
+      }
+
       if (!(await tokenManager.validateTokens())) {
         throw new Error("Authentication required. Please run 'npm run auth' to authenticate.");
       }
-      
+
       return handleCallTool(request, oauth2Client);
     });
 
